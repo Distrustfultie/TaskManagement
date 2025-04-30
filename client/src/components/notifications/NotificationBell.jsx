@@ -7,7 +7,7 @@ export default function NotificationBell() {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const res = await fetch('http://localhost:5000/notifications', {
+        const res = await fetch('https://taskmanagement-n1tx.onrender.com/notifications', {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
         const data = await res.json();

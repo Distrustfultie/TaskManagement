@@ -10,7 +10,7 @@ export default function SettingsPage() {
   useEffect(() => {
     // fetch current user settings from API
     (async () => {
-      const res = await fetch('http://localhost:5000/api/users/me', {
+      const res = await fetch('https://taskmanagement-n1tx.onrender.com/users/me', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       if (res.ok) {
@@ -25,7 +25,7 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     const [firstName, lastName] = name.split(' ');
-    const res = await fetch('http://localhost:5000/api/users/me', {
+    const res = await fetch('https://taskmanagement-n1tx.onrender.com/users/me', {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

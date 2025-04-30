@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = 'http://localhost:5000/tasks';
+const API_URL = 'https://taskmanagement-n1tx.onrender.com/tasks';
 
 export const fetchTasks = async () => {
   try {
