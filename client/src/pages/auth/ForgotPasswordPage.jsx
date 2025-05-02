@@ -9,7 +9,7 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch('https://taskmanagement-n1tx.onrender.com/auth/forgot', {
+      const res = await fetch('https://taskmanagement-n1tx.onrender.com/api/auth/forgot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })

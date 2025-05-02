@@ -15,7 +15,7 @@ export default function ResetPasswordPage() {
     if (password !== confirm) return toast.error('Passwords do not match');
     setLoading(true);
     try {
-      const res = await fetch('https://taskmanagement-n1tx.onrender.com/auth/reset', {
+      const res = await fetch('https://taskmanagement-n1tx.onrender.com/api/auth/reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password })
