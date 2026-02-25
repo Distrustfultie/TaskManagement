@@ -17,7 +17,7 @@ const app = express();
 
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://efe-task-manager.vercel.app/'
+  'https://efe-task-manager.vercel.app'
 ];
 
 app.use(cors({
@@ -28,10 +28,13 @@ app.use(cors({
       callback(new Error('Not allowed by CORS'));
     }
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
+
+// 👇 THIS LINE FIXES THE PREFLIGHT ISSUE
+app.options('*', cors());
 
 
 app.use(express.json());
