@@ -1,141 +1,193 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
-const crypto    = require('crypto');
+const crypto = require('crypto');
 const sendEmail = require('../utils/sendEmail');
 
-const createToken = (userId) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, {
-    expiresIn: '7d'
-  });
+/* -------------------- Helpers -------------------- */
+const createToken = (userId, rememberMe = false) => {
+  return jwt.sign(
+    { userId },
+    process.env.JWT_SECRET,
+    { expiresIn: rememberMe ? '30d' : '7d' }
+  );
 };
 
+/* -------------------- Register -------------------- */
 exports.register = async (req, res) => {
   try {
-    console.log('➡️ Received registration request:', req.body);
     const { firstName, lastName, email, password, confirmPassword } = req.body;
 
-    // Validation checks
-    console.log('🔍 Validating fields...');
     if (!firstName || !lastName || !email || !password || !confirmPassword) {
-      console.log('❌ Missing fields');
-      return res.status(400).json({ error: 'All fields are required' });
+      return res.status(400).json({ message: 'All fields are required' });
     }
 
-    console.log('🔍 Checking password match...');
     if (password !== confirmPassword) {
-      console.log('❌ Password mismatch');
-      return res.status(400).json({ error: 'Passwords do not match' });
+      return res.status(400).json({ message: 'Passwords do not match' });
     }
 
     const normalizedEmail = email.toLowerCase().trim();
-    console.log(`🔍 Checking existence for: ${normalizedEmail}`);
-    
     const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
-      console.log(`❌ Email already exists: ${normalizedEmail}`);
-      return res.status(400).json({ error: 'Email already exists' });
+      return res.status(400).json({ message: 'Email already exists' });
     }
 
-    console.log('✅ Creating new user...');
+    // Create email verification token
+    const verifyToken = crypto.randomBytes(20).toString('hex');
+
     const user = new User({
       firstName,
       lastName,
       email: normalizedEmail,
-      password
+      password,
+      isVerified: false,
+      emailVerifyToken: crypto
+        .createHash('sha256')
+        .update(verifyToken)
+        .digest('hex'),
+      emailVerifyExpires: Date.now() + 3600000, // 1 hour
     });
 
     await user.save();
-    console.log('✅ User saved successfully');
 
+    // Send verification email
+    const verifyURL = `${process.env.CLIENT_URL}/verify-email?token=${verifyToken}`;
+
+    await sendEmail(
+      user.email,
+      'Verify your email',
+      `Welcome to Efes Manager 👋\n\nPlease verify your email:\n${verifyURL}\n\nThis link expires in 1 hour.`
+    );
+
+    res.status(201).json({
+      message: 'Account created. Please verify your email.',
+    });
   } catch (error) {
-    console.error('🔥 Registration error:', error);
-    res.status(400).json({ error: error.message });
+    res.status(500).json({ message: 'Registration failed' });
   }
 };
 
+/* -------------------- Verify Email -------------------- */
+exports.verifyEmail = async (req, res) => {
+  const hashedToken = crypto
+    .createHash('sha256')
+    .update(req.query.token)
+    .digest('hex');
+
+  const user = await User.findOne({
+    emailVerifyToken: hashedToken,
+    emailVerifyExpires: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return res.status(400).json({ message: 'Invalid or expired token' });
+  }
+
+  user.isVerified = true;
+  user.emailVerifyToken = undefined;
+  user.emailVerifyExpires = undefined;
+  await user.save();
+
+  res.json({ message: 'Email successfully verified' });
+};
+
+/* -------------------- Login -------------------- */
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, rememberMe } = req.body;
+
     const user = await User.findOne({ email });
-    
     if (!user || !(await user.comparePassword(password))) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    const token = createToken(user._id);
-    res.json({ token });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
+    if (!user.isVerified) {
+      return res.status(403).json({ message: 'Please verify your email first' });
+    }
+
+    const token = createToken(user._id, rememberMe);
+
+    res.json({
+      token,
+      user: {
+        _id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        fullName: `${user.firstName} ${user.lastName}`,
+        createdAt: user.createdAt,
+      },
+    });
+  } catch {
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
+/* -------------------- Get Me -------------------- */
 exports.getMe = async (req, res) => {
   try {
     const user = await User.findById(req.userId).select('-password -__v');
-    
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-    const fullName = `${user.firstName} ${user.lastName}`;
-    
     res.json({
       _id: user._id,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-      fullName,
-      createdAt: user.createdAt
+      fullName: `${user.firstName} ${user.lastName}`,
+      createdAt: user.createdAt,
     });
-  } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+  } catch {
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
+/* -------------------- Forgot Password -------------------- */
 exports.forgotPassword = async (req, res) => {
-  const { email } = req.body;
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email: req.body.email });
   if (!user) return res.status(404).json({ message: 'No user with that email' });
 
-  // 1) generate & save a temporary reset token
   const token = crypto.randomBytes(20).toString('hex');
-  user.resetToken   = crypto.createHash('sha256').update(token).digest('hex');
-  user.resetExpires = Date.now() + 3600000; // 1 hour
+  user.resetToken = crypto.createHash('sha256').update(token).digest('hex');
+  user.resetExpires = Date.now() + 3600000;
   await user.save();
 
-  // 2) send email with unhashed token
-  const resetURL = `${req.protocol}://${req.get('host')}/reset-password?token=${token}`;
+  const resetURL = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
+
   try {
     await sendEmail(
       user.email,
-      'Your password reset link',
-      `Click here to reset your password:\n\n${resetURL}\n\nThis link expires in one hour.`
+      'Reset your password',
+      `Reset your password here:\n${resetURL}\n\nExpires in 1 hour.`
     );
     res.json({ message: 'Reset link sent' });
-  } catch (err) {
-    // rollback on failure
+  } catch {
     user.resetToken = undefined;
     user.resetExpires = undefined;
     await user.save();
-    res.status(500).json({ message: 'Error sending email' });
+    res.status(500).json({ message: 'Email failed to send' });
   }
 };
 
-// POST /api/auth/reset
+/* -------------------- Reset Password -------------------- */
 exports.resetPassword = async (req, res) => {
-  const { token, password } = req.body;
-  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+  const hashedToken = crypto
+    .createHash('sha256')
+    .update(req.body.token)
+    .digest('hex');
 
-  // 1) find user by token & check expiry
   const user = await User.findOne({
     resetToken: hashedToken,
-    resetExpires: { $gt: Date.now() }
+    resetExpires: { $gt: Date.now() },
   });
-  if (!user) return res.status(400).json({ message: 'Token is invalid or expired' });
 
-  // 2) update password & clear reset fields
-  user.password = password;
+  if (!user) {
+    return res.status(400).json({ message: 'Token invalid or expired' });
+  }
+
+  user.password = req.body.password;
   user.resetToken = undefined;
   user.resetExpires = undefined;
   await user.save();
 
-  res.json({ message: 'Password successfully reset' });
+  res.json({ message: 'Password reset successful' });
 };

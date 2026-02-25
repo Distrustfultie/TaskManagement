@@ -17,7 +17,7 @@ const app = express();
 
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://vermillion-pika-d525ea.netlify.app'
+  'https://efe-task-manager.vercel.app/'
 ];
 
 app.use(cors({
