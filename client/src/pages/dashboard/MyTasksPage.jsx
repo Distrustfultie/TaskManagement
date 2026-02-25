@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchTasks, deleteTask } from "../../api";
+import { fetchTasks, deleteTask } from "../../services/api";
 import TaskCard from "../../components/tasks/TaskCard";
 import TaskFormModal from "../../components/TaskForm";
 import { toast } from "react-hot-toast";

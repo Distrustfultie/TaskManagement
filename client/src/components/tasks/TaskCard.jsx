@@ -5,7 +5,7 @@ import {
   CheckCircle,
   AlertTriangle,
 } from "lucide-react";
-import { updateTask } from "../../api";
+import { updateTask } from "../../services/api";
 import { toast } from "react-hot-toast";
 
 /**

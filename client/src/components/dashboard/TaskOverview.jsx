@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 import { motion } from 'framer-motion';
-import { fetchTasks } from '../../api';
+import { fetchTasks } from '../../services/api';
 
 export default function TaskOverview() {
   const [tasks, setTasks] = useState([]);

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Calendar } from "react-date-range";
 import { useNavigate } from "react-router-dom";
-import { fetchTasks, updateTask } from "../../api";
+import { fetchTasks, updateTask } from "../../services/api";
 import TaskCard from "../../components/tasks/TaskCard";
 import { DndContext, useDraggable, useDroppable } from "@dnd-kit/core";
 

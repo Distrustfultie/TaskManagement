@@ -1,6 +1,12 @@
 import axios from "axios";
 
-const API_URL = 'https://taskmanagement-n1tx.onrender.com/tasks';
+const BASE_URL = import.meta.env.VITE_API_URL;
+
+if (!BASE_URL) {
+  throw new Error("VITE_API_URL is not defined");
+}
+
+const API_URL = `${BASE_URL}/tasks`;
 
 export const fetchTasks = async () => {
   try {
@@ -8,7 +14,7 @@ export const fetchTasks = async () => {
     return response.data;
   } catch (error) {
     console.error("Error fetching tasks:", error);
-    return[];
+    return [];
   }
 };
 
@@ -21,7 +27,6 @@ export const createTask = async (task) => {
     return null;
   }
 };
-
 
 export const updateTask = async (id, task) => {
   try {
