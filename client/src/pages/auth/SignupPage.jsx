@@ -1,8 +1,8 @@
-// src/pages/SignupPage.jsx
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import AuthForm from './../../components/auth/AuthForm';
-import { toast } from 'react-hot-toast';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
+import AuthLayout from "../../layouts/AuthLayout";
+import AuthForm from "../../components/auth/AuthForm";
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -11,34 +11,44 @@ export default function SignupPage() {
   const handleSignup = async (credentials) => {
     try {
       setLoading(true);
-      const response = await fetch('https://taskmanagement-n1tx.onrender.com/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credentials)
-      });
 
-      if (!response.ok) throw new Error('Registration failed');
-      const { token } = await response.json();
-      localStorage.setItem('token', token);
-      navigate('/dashboard');
-    } catch (error) {
-      toast.error(error.message);
+      const res = await fetch(
+        "https://taskmanagement-n1tx.onrender.com/api/auth/register",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(credentials),
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Registration failed");
+      }
+
+      toast.success("Account created! Please sign in.");
+      navigate("/login");
+    } catch (err) {
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-dark/5">
-      <div className="w-full max-w-md">
-        <AuthForm type="signup" onSubmit={handleSignup} loading={loading} />
-        <p className="mt-4 text-center text-accent">
-          Already have an account?{' '}
-          <Link to="/login" className="text-primary hover:underline">
-            Sign in
-          </Link>
-        </p>
+    <AuthLayout
+      title="Create your account"
+      subtitle="Start managing your tasks in minutes"
+    >
+      <AuthForm type="signup" onSubmit={handleSignup} loading={loading} />
+
+      <div className="mt-6 text-center text-sm text-accent">
+        Already have an account?{" "}
+        <Link to="/login" className="text-primary hover:underline">
+          Sign in
+        </Link>
       </div>
-    </div>
+    </AuthLayout>
   );
 }

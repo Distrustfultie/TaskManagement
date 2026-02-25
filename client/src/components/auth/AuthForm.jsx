@@ -1,33 +1,50 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 
 export default function AuthForm({ type, onSubmit, loading }) {
+  const emailRef = useRef(null);
+
   const [form, setForm] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
   });
 
+  const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    emailRef.current?.focus();
+  }, []);
+
   const handleChange = (e) => {
+    setError("");
     setForm({ ...form, [e.target.name]: e.target.value });
   };
+
+  const getPasswordStrength = () => {
+    const p = form.password;
+    if (!p) return null;
+    if (p.length < 6) return { label: "Weak", color: "bg-red-500" };
+    if (/[A-Z]/.test(p) && /\d/.test(p))
+      return { label: "Strong", color: "bg-green-500" };
+    return { label: "Medium", color: "bg-yellow-500" };
+  };
+
+  const strength = getPasswordStrength();
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (type === 'signup' && form.password !== form.confirmPassword) {
-      alert('Passwords do not match');
+    if (type === "signup" && form.password !== form.confirmPassword) {
+      setError("Passwords do not match");
       return;
     }
 
-    // Build credentials to send
     const credentials =
-      type === 'login'
-        ? {
-            email: form.email,
-            password: form.password,
-          }
+      type === "login"
+        ? { email: form.email, password: form.password }
         : {
             firstName: form.firstName,
             lastName: form.lastName,
@@ -40,80 +57,132 @@ export default function AuthForm({ type, onSubmit, loading }) {
   };
 
   return (
-    <div className="max-w-md mx-auto p-6 bg-secondary/10 rounded-xl shadow-lg">
-      <h2 className="text-2xl font-bold text-dark mb-6 text-center">
-        {type === 'login' ? 'Welcome Back' : 'Create Account'}
-      </h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {type === 'signup' && (
-          <>
-            <div>
-              <label className="block text-accent mb-2">First name</label>
-              <input
-                type="text"
-                name="firstName"
-                value={form.firstName}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-accent"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-accent mb-2">Last name</label>
-              <input
-                type="text"
-                name="lastName"
-                value={form.lastName}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-accent"
-                required
-              />
-            </div>
-          </>
-        )}
-        <div>
-          <label className="block text-accent mb-2">Email</label>
+    <form onSubmit={handleSubmit} noValidate className="space-y-5">
+      {/* Error */}
+      {error && (
+        <div className="rounded-lg bg-red-500/10 text-red-600 text-sm px-4 py-2">
+          {error}
+        </div>
+      )}
+
+      {/* Names */}
+      {type === "signup" && (
+        <div className="grid grid-cols-2 gap-4">
           <input
-            type="email"
-            name="email"
-            value={form.email}
+            name="firstName"
+            placeholder="First name"
+            value={form.firstName}
             onChange={handleChange}
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-accent"
+            className="input"
+            required
+          />
+          <input
+            name="lastName"
+            placeholder="Last name"
+            value={form.lastName}
+            onChange={handleChange}
+            className="input"
             required
           />
         </div>
+      )}
+
+      {/* Email */}
+      <input
+        ref={emailRef}
+        type="email"
+        name="email"
+        placeholder="Email address"
+        value={form.email}
+        onChange={handleChange}
+        className="input"
+        required
+      />
+
+      {/* Password */}
+      <div className="relative">
+        <input
+          type={showPassword ? "text" : "password"}
+          name="password"
+          placeholder="Password"
+          value={form.password}
+          onChange={handleChange}
+          className="input pr-14"
+          required
+        />
+        <button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-primary hover:underline"
+        >
+          {showPassword ? "Hide" : "Show"}
+        </button>
+      </div>
+
+      {/* Strength meter */}
+      {strength && (
         <div>
-          <label className="block text-accent mb-2">Password</label>
-          <input
-            type="password"
-            name="password"
-            value={form.password}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-accent"
-            required
-          />
-        </div>
-        {type === 'signup' && (
-          <div>
-            <label className="block text-accent mb-2">Confirm Password</label>
-            <input
-              type="password"
-              name="confirmPassword"
-              value={form.confirmPassword}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-accent"
-              required
+          <div className="h-1 rounded bg-dark/10">
+            <div
+              className={`h-1 rounded ${strength.color}`}
+              style={{
+                width:
+                  strength.label === "Weak"
+                    ? "33%"
+                    : strength.label === "Medium"
+                    ? "66%"
+                    : "100%",
+              }}
             />
           </div>
-        )}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-2 bg-primary text-white rounded-lg hover:bg-accent transition-colors disabled:opacity-50"
-        >
-          {loading ? 'Please wait...' : type === 'login' ? 'Sign In' : 'Sign Up'}
+          <p className="text-xs text-accent mt-1">
+            Password strength: {strength.label}
+          </p>
+        </div>
+      )}
+
+      {/* Confirm password */}
+      {type === "signup" && (
+        <input
+          type="password"
+          name="confirmPassword"
+          placeholder="Confirm password"
+          value={form.confirmPassword}
+          onChange={handleChange}
+          className="input"
+          required
+        />
+      )}
+
+      {/* Submit */}
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full py-3 rounded-xl bg-primary text-white font-semibold transition-all hover:bg-accent hover:-translate-y-0.5 disabled:opacity-50"
+      >
+        {loading
+          ? "Please wait…"
+          : type === "login"
+          ? "Sign In"
+          : "Create Account"}
+      </button>
+
+      {/* Divider */}
+      <div className="flex items-center gap-3 my-6">
+        <div className="h-px bg-dark/10 flex-1" />
+        <span className="text-xs text-accent">or</span>
+        <div className="h-px bg-dark/10 flex-1" />
+      </div>
+
+      {/* Social buttons (UI only) */}
+      <div className="grid grid-cols-2 gap-3">
+        <button type="button" className="social-btn">
+          Google
         </button>
-      </form>
-    </div>
+        <button type="button" className="social-btn">
+          GitHub
+        </button>
+      </div>
+    </form>
   );
 }

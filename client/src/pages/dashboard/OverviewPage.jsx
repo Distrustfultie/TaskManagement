@@ -1,20 +1,30 @@
-// src/pages/dashboard/OverviewPage.jsx
-import { useEffect } from 'react';
-import CalendarWidget from '../../components/CalendarWidget';
-import TaskOverview from '../../components/dashboard/TaskOverview';
+import TaskOverview from "../../components/dashboard/TaskOverview";
+import CalendarWidget from "../../components/CalendarWidget";
 
 export default function OverviewPage() {
-  useEffect(() => {
-    // Fetch initial dashboard data
-  }, []);
-
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2">
-        <TaskOverview />
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-dark">
+          Dashboard
+        </h1>
+        <p className="text-sm text-accent">
+          Overview of your tasks and schedule
+        </p>
       </div>
-      <div className="lg:col-span-1">
-        <CalendarWidget />
+
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Task Overview */}
+        <div className="xl:col-span-2">
+          <TaskOverview />
+        </div>
+
+        {/* Calendar */}
+        <div className="xl:col-span-1">
+          <CalendarWidget />
+        </div>
       </div>
     </div>
   );

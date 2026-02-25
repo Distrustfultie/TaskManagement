@@ -1,8 +1,8 @@
-// src/pages/LoginPage.jsx
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import AuthForm from '../../components/auth/AuthForm';
-import { toast } from 'react-hot-toast';
+import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { toast } from "react-hot-toast";
+import AuthLayout from "../../layouts/AuthLayout";
+import AuthForm from "../../components/auth/AuthForm";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -11,39 +11,46 @@ export default function LoginPage() {
   const handleLogin = async (credentials) => {
     try {
       setLoading(true);
-      const response = await fetch('https://taskmanagement-n1tx.onrender.com/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credentials)
-      });
-      
-      if (!response.ok) throw new Error('Login failed');
-      const { token } = await response.json();
-      localStorage.setItem('token', token);
-      navigate('/dashboard');
-    } catch (error) {
-      toast.error(error.message);
+
+      const res = await fetch(
+        "https://taskmanagement-n1tx.onrender.com/api/auth/login",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(credentials),
+        }
+      );
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Login failed");
+
+      localStorage.setItem("token", data.token);
+      toast.success("Welcome back 👋");
+      navigate("/dashboard");
+    } catch (err) {
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-dark/5">
-      <div className="w-full max-w-md">
-        <AuthForm type="login" onSubmit={handleLogin} loading={loading} />
-        <p className="mt-4 text-center text-accent">
-          Don&apos;t have an account?{' '}
-          <Link to="/signup" className="text-primary hover:underline">
-            Sign up
-          </Link>
-        </p>
-        <p className="mt-4 text-center text-accent">
-          <Link to="/forgot-password" className="text-primary hover:underline">
-            Forgot Password
-          </Link>
-        </p>
+    <AuthLayout
+      title="Welcome back"
+      subtitle="Sign in to continue to Efes Manager"
+    >
+      <AuthForm type="login" onSubmit={handleLogin} loading={loading} />
+
+      <div className="mt-6 text-center text-sm text-accent">
+        Don&apos;t have an account?{" "}
+        <Link to="/signup" className="text-primary hover:underline">
+          Create one
+        </Link>
+        <br />
+        <Link to="/forgot-password" className="text-primary hover:underline">
+          Forgot password?
+        </Link>
       </div>
-    </div>
+    </AuthLayout>
   );
 }
