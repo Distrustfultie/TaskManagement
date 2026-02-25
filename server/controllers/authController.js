@@ -12,7 +12,7 @@ const createToken = (userId, rememberMe = false) => {
   );
 };
 
-/* -------------------- Register -------------------- */
+/* -------------------- Register (AUTO VERIFIED) -------------------- */
 exports.register = async (req, res) => {
   try {
     const { firstName, lastName, email, password, confirmPassword } = req.body;
@@ -31,66 +31,25 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'Email already exists' });
     }
 
-    // Create email verification token
-    const verifyToken = crypto.randomBytes(20).toString('hex');
-
     const user = new User({
       firstName,
       lastName,
       email: normalizedEmail,
       password,
-      isVerified: false,
-      emailVerifyToken: crypto
-        .createHash('sha256')
-        .update(verifyToken)
-        .digest('hex'),
-      emailVerifyExpires: Date.now() + 3600000, // 1 hour
+      isVerified: true, // ✅ AUTO VERIFY (MVP)
     });
 
     await user.save();
 
-    // Send verification email
-    const verifyURL = `${process.env.CLIENT_URL}/verify-email?token=${verifyToken}`;
-
-    await sendEmail(
-      user.email,
-      'Verify your email',
-      `Welcome to Efes Manager 👋\n\nPlease verify your email:\n${verifyURL}\n\nThis link expires in 1 hour.`
-    );
-
     res.status(201).json({
-      message: 'Account created. Please verify your email.',
+      message: 'Account created successfully. You can now log in.',
     });
   } catch (error) {
     res.status(500).json({ message: 'Registration failed' });
   }
 };
 
-/* -------------------- Verify Email -------------------- */
-exports.verifyEmail = async (req, res) => {
-  const hashedToken = crypto
-    .createHash('sha256')
-    .update(req.query.token)
-    .digest('hex');
-
-  const user = await User.findOne({
-    emailVerifyToken: hashedToken,
-    emailVerifyExpires: { $gt: Date.now() },
-  });
-
-  if (!user) {
-    return res.status(400).json({ message: 'Invalid or expired token' });
-  }
-
-  user.isVerified = true;
-  user.emailVerifyToken = undefined;
-  user.emailVerifyExpires = undefined;
-  await user.save();
-
-  res.json({ message: 'Email successfully verified' });
-};
-
-/* -------------------- Login -------------------- */
+/* -------------------- Login (NO VERIFICATION BLOCK) -------------------- */
 exports.login = async (req, res) => {
   try {
     const { email, password, rememberMe } = req.body;
@@ -100,9 +59,7 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    if (!user.isVerified) {
-      return res.status(403).json({ message: 'Please verify your email first' });
-    }
+    // ❌ REMOVED email verification block
 
     const token = createToken(user._id, rememberMe);
 
