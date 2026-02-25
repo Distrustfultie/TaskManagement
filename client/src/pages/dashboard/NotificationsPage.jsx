@@ -1,113 +1,77 @@
-import { useEffect, useState } from "react";
-import { BellIcon, CheckIcon } from "@heroicons/react/24/outline";
+import { Bell } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useNotifications } from "../../context/NotificationContext";
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState([]);
+  const navigate = useNavigate();
+  const {
+    notifications,
+    markAsRead,
+    markAllAsRead,
+  } = useNotifications();
 
-  // Simulated fetch (replace with API later)
-  useEffect(() => {
-    setNotifications([
-      {
-        id: 1,
-        message: "Task “Design landing page” is due today",
-        date: "Today • 9:00 AM",
-        read: false,
-      },
-      {
-        id: 2,
-        message: "Reminder set for “Prepare weekly report”",
-        date: "Yesterday • 4:30 PM",
-        read: false,
-      },
-      {
-        id: 3,
-        message: "Task “Deploy to production” marked as done",
-        date: "2 days ago",
-        read: true,
-      },
-    ]);
-  }, []);
+  const today = [];
+  const earlier = [];
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  notifications.forEach((n) => {
+    const isToday =
+      new Date(n.createdAt).toDateString() ===
+      new Date().toDateString();
+    (isToday ? today : earlier).push(n);
+  });
 
-  const markAllAsRead = () => {
-    setNotifications((prev) =>
-      prev.map((n) => ({ ...n, read: true }))
-    );
-  };
+  const renderGroup = (title, list) => (
+    <>
+      <h3 className="text-sm font-semibold text-accent mt-6 mb-2">
+        {title}
+      </h3>
+      <div className="space-y-2">
+        {list.map((n) => (
+          <div
+            key={n.id}
+            onClick={() => {
+              markAsRead(n.id);
+              navigate(`/dashboard/task-details/${n.taskId}`);
+            }}
+            className={`p-4 rounded-lg cursor-pointer transition ${
+              n.read
+                ? "bg-white"
+                : "bg-primary/10 border-l-4 border-primary"
+            }`}
+          >
+            <p className="text-sm font-medium">{n.message}</p>
+          </div>
+        ))}
+      </div>
+    </>
+  );
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <BellIcon className="w-7 h-7 text-primary" />
-          <div>
-            <h1 className="text-2xl font-bold text-dark">
-              Notifications
-            </h1>
-            <p className="text-sm text-accent">
-              Stay up to date with your tasks
-            </p>
-          </div>
+    <div className="bg-white p-6 rounded-xl shadow-sm">
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center gap-2">
+          <Bell className="text-primary" />
+          <h2 className="text-xl font-bold">Notifications</h2>
         </div>
 
-        {unreadCount > 0 && (
-          <button
-            onClick={markAllAsRead}
-            className="flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-          >
-            <CheckIcon className="w-4 h-4" />
-            Mark all as read
-          </button>
-        )}
+        <button
+          onClick={markAllAsRead}
+          className="text-sm text-primary hover:underline"
+        >
+          Mark all as read
+        </button>
       </div>
 
-      {/* Notification List */}
-      <div className="bg-white rounded-2xl border border-dark/5 shadow-sm divide-y">
-        {notifications.length === 0 ? (
-          <div className="py-12 text-center">
-            <BellIcon className="w-10 h-10 mx-auto text-accent/40 mb-3" />
-            <p className="text-accent">
-              You’re all caught up 🎉
-            </p>
-          </div>
-        ) : (
-          notifications.map((notification) => (
-            <div
-              key={notification.id}
-              className={`flex gap-4 p-5 transition ${
-                notification.read
-                  ? "bg-white"
-                  : "bg-primary/5"
-              }`}
-            >
-              {/* Indicator */}
-              <div className="pt-1">
-                {!notification.read && (
-                  <span className="block w-2 h-2 rounded-full bg-primary" />
-                )}
-              </div>
-
-              {/* Content */}
-              <div className="flex-1">
-                <p
-                  className={`text-sm ${
-                    notification.read
-                      ? "text-dark"
-                      : "font-semibold text-dark"
-                  }`}
-                >
-                  {notification.message}
-                </p>
-                <time className="text-xs text-accent mt-1 block">
-                  {notification.date}
-                </time>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+      {today.length === 0 && earlier.length === 0 ? (
+        <p className="text-center text-accent py-10">
+          You’re all caught up 🎉
+        </p>
+      ) : (
+        <>
+          {today.length > 0 && renderGroup("Today", today)}
+          {earlier.length > 0 && renderGroup("Earlier", earlier)}
+        </>
+      )}
     </div>
   );
 }

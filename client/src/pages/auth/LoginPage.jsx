@@ -3,9 +3,11 @@ import { useState } from "react";
 import { toast } from "react-hot-toast";
 import AuthLayout from "../../layouts/AuthLayout";
 import AuthForm from "../../components/auth/AuthForm";
+import { useAuth } from "../../context/AuthContext";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth(); // ✅ IMPORTANT
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (credentials) => {
@@ -24,7 +26,9 @@ export default function LoginPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Login failed");
 
-      localStorage.setItem("token", data.token);
+      // ✅ THIS IS THE FIX
+      login(data.token, data.user);
+
       toast.success("Welcome back 👋");
       navigate("/dashboard");
     } catch (err) {

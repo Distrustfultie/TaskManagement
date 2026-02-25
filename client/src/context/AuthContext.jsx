@@ -8,7 +8,6 @@ export function AuthProvider({ children }) {
 
   const token = localStorage.getItem("token");
 
-  // Fetch logged-in user
   const fetchMe = async () => {
     if (!token) {
       setLoading(false);
@@ -38,7 +37,6 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     fetchMe();
-    // eslint-disable-next-line
   }, []);
 
   const login = (token, userData) => {
@@ -53,7 +51,13 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, isAuthenticated: !!user, login, logout }}
+      value={{
+        user,
+        loading,
+        isAuthenticated: !!user,
+        login,
+        logout,
+      }}
     >
       {children}
     </AuthContext.Provider>

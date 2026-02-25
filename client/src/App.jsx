@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 
 import DashboardLayout from "./layouts/DashboardLayout";
@@ -14,8 +14,6 @@ import CalendarPage from "./pages/dashboard/CalendarPage";
 import MyTasksPage from "./pages/dashboard/MyTasksPage";
 import NotificationsPage from "./pages/dashboard/NotificationsPage";
 
-import ToastNotifications from "./components/notifications/ToastNotifications";
-
 /* ---------- Loading Screen ---------- */
 function AppLoader() {
   return (
@@ -30,81 +28,75 @@ function AppLoader() {
 /* ---------- Protected Route ---------- */
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
-
   if (loading) return <AppLoader />;
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
-/* ---------- Auth-only Route (login/signup) ---------- */
+/* ---------- Auth-only Route ---------- */
 const AuthRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
-
   if (loading) return <AppLoader />;
   return !isAuthenticated ? children : <Navigate to="/dashboard" replace />;
 };
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <ToastNotifications />
+    <Routes>
+      {/* Public */}
+      <Route path="/" element={<HomePage />} />
 
-      <Routes>
-        {/* Public */}
-        <Route path="/" element={<HomePage />} />
+      {/* Auth */}
+      <Route
+        path="/login"
+        element={
+          <AuthRoute>
+            <LoginPage />
+          </AuthRoute>
+        }
+      />
+      <Route
+        path="/signup"
+        element={
+          <AuthRoute>
+            <SignupPage />
+          </AuthRoute>
+        }
+      />
+      <Route
+        path="/forgot-password"
+        element={
+          <AuthRoute>
+            <ForgotPasswordPage />
+          </AuthRoute>
+        }
+      />
+      <Route
+        path="/reset-password"
+        element={
+          <AuthRoute>
+            <ResetPasswordPage />
+          </AuthRoute>
+        }
+      />
 
-        {/* Auth */}
-        <Route
-          path="/login"
-          element={
-            <AuthRoute>
-              <LoginPage />
-            </AuthRoute>
-          }
-        />
-        <Route
-          path="/signup"
-          element={
-            <AuthRoute>
-              <SignupPage />
-            </AuthRoute>
-          }
-        />
-        <Route
-          path="/forgot-password"
-          element={
-            <AuthRoute>
-              <ForgotPasswordPage />
-            </AuthRoute>
-          }
-        />
-        <Route
-          path="/reset-password"
-          element={
-            <AuthRoute>
-              <ResetPasswordPage />
-            </AuthRoute>
-          }
-        />
+      {/* Dashboard */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<OverviewPage />} />
+        <Route path="tasks" element={<MyTasksPage />} />
+        <Route path="calendar" element={<CalendarPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="settings" element={<SettingsPage />} />
+      </Route>
 
-        {/* Dashboard */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <DashboardLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<OverviewPage />} />
-          <Route path="tasks" element={<MyTasksPage />} />
-          <Route path="calendar" element={<CalendarPage />} />
-          <Route path="notifications" element={<NotificationsPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-        </Route>
-
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
