@@ -1,38 +1,43 @@
-import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import AuthLayout from "../../layouts/AuthLayout";
-import AuthForm from "../../components/auth/AuthForm";
+import PasswordField from "../../components/auth/PasswordField";
+import FormAlert from "../../components/auth/FormAlert";
 import { useAuth } from "../../context/AuthContext";
+import { authApi, getErrorMessage } from "../../services/api";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth(); // ✅ IMPORTANT
+  const location = useLocation();
+  const { login } = useAuth();
+  const [form, setForm] = useState({ email: location.state?.email ?? "", password: "", rememberMe: true });
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (credentials) => {
+  const set = (key) => (e) => {
+    setError("");
+    setForm((f) => ({ ...f, [key]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.email.trim() || !form.password) {
+      setError("Enter your email and password.");
+      return;
+    }
+    setLoading(true);
     try {
-      setLoading(true);
-
-      const res = await fetch(
-        "https://taskmanagement-n1tx.onrender.com/api/auth/login",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(credentials),
-        }
-      );
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Login failed");
-
-      // ✅ THIS IS THE FIX
+      const data = await authApi.login({
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+        rememberMe: form.rememberMe,
+      });
       login(data.token, data.user);
-
-      toast.success("Welcome back 👋");
+      toast.success(`Welcome back${data.user?.firstName ? `, ${data.user.firstName}` : ""}`);
       navigate("/dashboard");
     } catch (err) {
-      toast.error(err.message);
+      setError(getErrorMessage(err, "Couldn't sign you in"));
     } finally {
       setLoading(false);
     }
@@ -41,20 +46,63 @@ export default function LoginPage() {
   return (
     <AuthLayout
       title="Welcome back"
-      subtitle="Sign in to continue to Efes Manager"
+      subtitle="Sign in to pick up where you left off."
+      docTitle="Sign in"
+      footer={
+        <>
+          New to Efes Manager?{" "}
+          <Link to="/signup" className="link">
+            Create an account
+          </Link>
+        </>
+      }
     >
-      <AuthForm type="login" onSubmit={handleLogin} loading={loading} />
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
+        <FormAlert>{error}</FormAlert>
 
-      <div className="mt-6 text-center text-sm text-accent">
-        Don&apos;t have an account?{" "}
-        <Link to="/signup" className="text-primary hover:underline">
-          Create one
-        </Link>
-        <br />
-        <Link to="/forgot-password" className="text-primary hover:underline">
-          Forgot password?
-        </Link>
-      </div>
+        <div>
+          <label htmlFor="email" className="label">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            className="input"
+            placeholder="you@example.com"
+            autoComplete="email"
+            autoFocus
+            value={form.email}
+            onChange={set("email")}
+          />
+        </div>
+
+        <PasswordField
+          id="password"
+          label="Password"
+          autoComplete="current-password"
+          value={form.password}
+          onChange={set("password")}
+          labelAction={
+            <Link to="/forgot-password" className="link mb-1.5 text-[13px]">
+              Forgot password?
+            </Link>
+          }
+        />
+
+        <label className="flex cursor-pointer items-center gap-2 text-[13px] text-muted">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded accent-[rgb(var(--primary))]"
+            checked={form.rememberMe}
+            onChange={set("rememberMe")}
+          />
+          Keep me signed in for 30 days
+        </label>
+
+        <button type="submit" className="btn btn-primary btn-lg w-full" disabled={loading}>
+          {loading ? "Signing in…" : "Sign in"}
+        </button>
+      </form>
     </AuthLayout>
   );
 }

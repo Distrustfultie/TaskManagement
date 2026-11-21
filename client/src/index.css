@@ -2,28 +2,178 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ---------- Custom Components ---------- */
+/* ---------- Design tokens (RGB triplets so Tailwind opacity modifiers work) ---------- */
+@layer base {
+  :root {
+    --canvas: 250 250 249;
+    --surface: 255 255 255;
+    --subtle: 245 245 244;
+    --line: 231 229 228;
+    --line-strong: 214 211 209;
+    --ink: 28 25 23;
+    --muted: 87 83 78;
+    --faint: 120 113 108;
+
+    --primary: 205 28 24;
+    --primary-hover: 176 22 19;
+    --primary-soft: 254 242 241;
+    --primary-ink: 176 22 19;
+
+    /* Validated categorical set (dataviz validator, light surface) */
+    --status-todo: 217 119 6;
+    --status-progress: 37 99 235;
+    --status-done: 5 150 105;
+
+    /* Project identity colors — dataviz reference categorical palette (validated) */
+    --proj-blue: 42 120 214;
+    --proj-orange: 235 104 52;
+    --proj-aqua: 27 175 122;
+    --proj-yellow: 237 161 0;
+    --proj-magenta: 232 123 164;
+    --proj-green: 0 131 0;
+    --proj-violet: 98 80 214;
+    --proj-red: 227 73 72;
+
+    color-scheme: light;
+  }
+
+  .dark {
+    --canvas: 12 10 9;
+    --surface: 28 25 23;
+    --subtle: 41 37 36;
+    --line: 50 46 44;
+    --line-strong: 68 64 60;
+    --ink: 245 245 244;
+    --muted: 168 162 158;
+    --faint: 140 133 128;
+
+    --primary: 205 28 24;
+    --primary-hover: 222 44 38;
+    --primary-soft: 64 18 16;
+    --primary-ink: 255 138 128;
+
+    /* Validated categorical set (dataviz validator, dark surface #1c1917) */
+    --status-todo: 201 122 6;
+    --status-progress: 75 142 240;
+    --status-done: 19 158 114;
+
+    --proj-blue: 57 135 229;
+    --proj-orange: 217 89 38;
+    --proj-aqua: 25 158 112;
+    --proj-yellow: 201 133 0;
+    --proj-magenta: 213 81 129;
+    --proj-green: 12 163 12;
+    --proj-violet: 144 133 233;
+    --proj-red: 230 103 103;
+
+    color-scheme: dark;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-canvas text-ink font-sans text-sm;
+  }
+
+  ::selection {
+    @apply bg-primary/20;
+  }
+}
+
+/* ---------- Components ---------- */
 @layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg
+      h-9 px-3.5 text-sm font-medium transition-colors duration-150
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40
+      focus-visible:ring-offset-2 focus-visible:ring-offset-canvas
+      disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply bg-primary text-white shadow-xs hover:bg-primary-hover;
+  }
+  .btn-secondary {
+    @apply border border-line bg-surface text-ink shadow-xs hover:bg-subtle;
+  }
+  .btn-ghost {
+    @apply text-muted hover:bg-subtle hover:text-ink;
+  }
+  .btn-danger {
+    @apply bg-primary text-white shadow-xs hover:bg-primary-hover;
+  }
+  .btn-sm {
+    @apply h-8 px-2.5 text-[13px];
+  }
+  .btn-lg {
+    @apply h-11 px-5 text-[15px];
+  }
+  .btn-icon {
+    @apply h-9 w-9 px-0;
+  }
+  .btn-icon.btn-sm {
+    @apply h-8 w-8;
+  }
+
   .input {
-    @apply w-full px-4 py-2.5 rounded-lg
-      border border-dark/20
-      bg-white/80 dark:bg-white/5
-      text-dark dark:text-white
-      placeholder:text-dark/40
-      focus:outline-none
-      focus:ring-2 focus:ring-primary/40
-      focus:border-primary
-      transition;
+    @apply block h-10 w-full rounded-lg border border-line bg-surface px-3
+      text-sm text-ink placeholder:text-faint shadow-xs
+      transition-[border-color,box-shadow] duration-150
+      focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15
+      disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .input[aria-invalid="true"] {
+    @apply border-primary;
+  }
+  select.input {
+    @apply appearance-none pr-9;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2378716c'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+    background-size: 1.1rem;
+  }
+  /* Make the native date picker icon visible in dark mode */
+  .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+  .dark input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.8);
   }
 
-  /* Prevent browser invalid styles */
-  .input:invalid {
-    @apply border-dark/20;
+  .label {
+    @apply mb-1.5 block text-[13px] font-medium text-ink;
+  }
+  .hint {
+    @apply mt-1.5 text-xs text-faint;
+  }
+  .field-error {
+    @apply mt-1.5 text-xs font-medium text-primary-ink;
   }
 
-  .social-btn {
-    @apply py-2.5 rounded-lg border border-dark/20
-      text-sm font-medium
-      hover:bg-primary/5 transition;
+  .card {
+    @apply rounded-xl border border-line bg-surface shadow-card;
+  }
+
+  .link {
+    @apply font-medium text-primary-ink underline-offset-4 hover:underline
+      focus-visible:outline-none focus-visible:underline;
+  }
+
+  .kbd {
+    @apply rounded border border-line bg-subtle px-1.5 py-0.5 text-[11px] font-medium text-muted;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--line-strong)) transparent;
+  }
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 }

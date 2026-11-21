@@ -1,94 +1,192 @@
-import { useState, useEffect } from 'react';
-import { toast } from 'react-hot-toast';
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { LogOut, Monitor, Moon, Sun } from "lucide-react";
+import { toast } from "react-hot-toast";
+import { useAuth } from "../../context/AuthContext";
+import { useTheme } from "../../context/ThemeContext";
+import { userApi, getErrorMessage } from "../../services/api";
+import Segmented from "../../components/ui/Segmented";
+import Avatar from "../../components/ui/Avatar";
+import { Skeleton } from "../../components/ui/Skeleton";
+
+function Section({ title, description, children }) {
+  return (
+    <section className="card">
+      <div className="grid gap-6 p-5 sm:p-6 md:grid-cols-[220px_1fr]">
+        <div>
+          <h2 className="font-semibold text-ink">{title}</h2>
+          {description && <p className="mt-1 text-[13px] text-muted">{description}</p>}
+        </div>
+        <div>{children}</div>
+      </div>
+    </section>
+  );
+}
+
+const THEMES = [
+  { value: "light", label: "Light", icon: Sun },
+  { value: "dark", label: "Dark", icon: Moon },
+  { value: "system", label: "System", icon: Monitor },
+];
 
 export default function SettingsPage() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [theme, setTheme] = useState('light');
-  const [defaultFreq, setDefaultFreq] = useState('Daily');
+  const navigate = useNavigate();
+  const { user, updateUser, logout } = useAuth();
+  const { theme, setTheme } = useTheme();
+  const [form, setForm] = useState(null);
+  const [saved, setSaved] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    // fetch current user settings from API
-    (async () => {
-      const res = await fetch('https://taskmanagement-n1tx.onrender.com/users/me', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      if (res.ok) {
-        const user = await res.json();
-        setName(user.firstName + ' ' + user.lastName);
-        setEmail(user.email);
-        setTheme(user.theme || 'light');
-        setDefaultFreq(user.defaultFreq || 'Daily');
-      }
-    })();
+    userApi
+      .me()
+      .then((u) => {
+        const f = {
+          firstName: u.firstName ?? "",
+          lastName: u.lastName ?? "",
+          email: u.email ?? "",
+          defaultFreq: u.defaultFreq ?? "Daily",
+        };
+        setForm(f);
+        setSaved(f);
+      })
+      .catch((err) => toast.error(getErrorMessage(err, "Couldn't load your settings")));
   }, []);
 
-  const handleSave = async () => {
-    const [firstName, lastName] = name.split(' ');
-    const res = await fetch('https://taskmanagement-n1tx.onrender.com/users/me', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify({ firstName, lastName, email, theme, defaultFreq })
-    });
-    if (res.ok) toast.success('Settings saved!');
-    else toast.error('Save failed');
+  const dirty = form && saved && JSON.stringify(form) !== JSON.stringify(saved);
+  const set = (key) => (e) => {
+    setForm((f) => ({ ...f, [key]: e.target.value }));
+    setErrors((er) => ({ ...er, [key]: undefined }));
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    const er = {};
+    if (!form.firstName.trim()) er.firstName = "Required";
+    if (!form.lastName.trim()) er.lastName = "Required";
+    if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) er.email = "Enter a valid email";
+    setErrors(er);
+    if (Object.keys(er).length) return;
+
+    setSaving(true);
+    try {
+      const body = {
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        email: form.email.trim().toLowerCase(),
+        defaultFreq: form.defaultFreq,
+      };
+      if (theme !== "system") body.theme = theme;
+      const u = await userApi.update(body);
+      const next = { firstName: u.firstName, lastName: u.lastName, email: u.email, defaultFreq: u.defaultFreq };
+      setForm(next);
+      setSaved(next);
+      updateUser({ firstName: u.firstName, lastName: u.lastName, email: u.email });
+      toast.success("Settings saved");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Couldn't save your settings"));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6 space-y-6 bg-white rounded-xl shadow">
-      <h1 className="text-2xl font-bold">Settings</h1>
-      {/* Profile */}
-      <section>
-        <h2 className="text-lg font-semibold">Profile</h2>
-        <input
-          type="text"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          placeholder="Your Name"
-          className="w-full mb-4 border px-3 py-2 rounded"
-        />
-        <input
-          type="email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          placeholder="Email"
-          className="w-full border px-3 py-2 rounded"
-        />
-      </section>
-      {/* Notifications */}
-      <section>
-        <h2 className="text-lg font-semibold">Notifications</h2>
-        <select
-          value={defaultFreq}
-          onChange={e => setDefaultFreq(e.target.value)}
-          className="w-full border px-3 py-2 rounded"
+    <div className="mx-auto max-w-4xl space-y-6">
+      <form onSubmit={handleSave} className="space-y-6">
+        <Section title="Profile" description="Your name and the email reminders are sent to.">
+          {!form ? (
+            <div className="space-y-4">
+              <Skeleton className="h-10" />
+              <Skeleton className="h-10" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Avatar user={form} size={44} />
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-ink">
+                    {`${form.firstName} ${form.lastName}`.trim() || "Your name"}
+                  </p>
+                  <p className="truncate text-[13px] text-faint">
+                    Member since {user?.createdAt ? new Date(user.createdAt).getFullYear() : "—"}
+                  </p>
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="s-first" className="label">First name</label>
+                  <input id="s-first" className="input" value={form.firstName} onChange={set("firstName")} aria-invalid={!!errors.firstName} autoComplete="given-name" />
+                  {errors.firstName && <p className="field-error">{errors.firstName}</p>}
+                </div>
+                <div>
+                  <label htmlFor="s-last" className="label">Last name</label>
+                  <input id="s-last" className="input" value={form.lastName} onChange={set("lastName")} aria-invalid={!!errors.lastName} autoComplete="family-name" />
+                  {errors.lastName && <p className="field-error">{errors.lastName}</p>}
+                </div>
+              </div>
+              <div>
+                <label htmlFor="s-email" className="label">Email</label>
+                <input id="s-email" type="email" className="input" value={form.email} onChange={set("email")} aria-invalid={!!errors.email} autoComplete="email" />
+                {errors.email && <p className="field-error">{errors.email}</p>}
+              </div>
+            </div>
+          )}
+        </Section>
+
+        <Section title="Reminders" description="How often recurring reminders repeat by default.">
+          {form ? (
+            <div className="max-w-xs">
+              <label htmlFor="s-freq" className="label">Default frequency</label>
+              <select id="s-freq" className="input" value={form.defaultFreq} onChange={set("defaultFreq")}>
+                <option value="Daily">Every day</option>
+                <option value="Weekly">Every week</option>
+                <option value="Monthly">Every month</option>
+              </select>
+            </div>
+          ) : (
+            <Skeleton className="h-10 max-w-xs" />
+          )}
+        </Section>
+
+        <div className="flex items-center justify-end gap-3">
+          {dirty && <span className="text-[13px] text-muted">You have unsaved changes</span>}
+          <button type="button" className="btn btn-secondary" disabled={!dirty || saving} onClick={() => setForm(saved)}>
+            Discard
+          </button>
+          <button type="submit" className="btn btn-primary" disabled={!dirty || saving}>
+            {saving ? "Saving…" : "Save changes"}
+          </button>
+        </div>
+      </form>
+
+      <Section title="Appearance" description="Applies instantly on this device.">
+        <div className="max-w-sm">
+          <Segmented
+            label="Theme"
+            options={THEMES}
+            value={theme}
+            onChange={setTheme}
+            renderOption={(o) => (
+              <>
+                <o.icon size={15} /> {o.label}
+              </>
+            )}
+          />
+        </div>
+      </Section>
+
+      <Section title="Session" description="Sign out of Efes Manager on this device.">
+        <button
+          className="btn btn-secondary"
+          onClick={() => {
+            logout();
+            navigate("/login");
+          }}
         >
-          <option value="Daily">Daily</option>
-          <option value="Weekly">Weekly</option>
-          <option value="Monthly">Monthly</option>
-        </select>
-      </section>
-      {/* Theme */}
-      <section>
-        <h2 className="text-lg font-semibold">Theme</h2>
-        <select
-          value={theme}
-          onChange={e => setTheme(e.target.value)}
-          className="w-full border px-3 py-2 rounded"
-        >
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-        </select>
-      </section>
-      <button
-        onClick={handleSave}
-        className="px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20"
-      >
-        Save
-      </button>
+          <LogOut size={16} /> Log out
+        </button>
+      </Section>
     </div>
   );
 }

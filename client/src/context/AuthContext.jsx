@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { authApi } from "../services/api";
 
 const AuthContext = createContext(null);
 
@@ -6,58 +7,46 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const token = localStorage.getItem("token");
+  const logout = useCallback(() => {
+    localStorage.removeItem("token");
+    setUser(null);
+  }, []);
 
-  const fetchMe = async () => {
-    if (!token) {
+  // Restore the session on first load
+  useEffect(() => {
+    if (!localStorage.getItem("token")) {
       setLoading(false);
       return;
     }
+    authApi
+      .me()
+      .then(setUser)
+      .catch(logout)
+      .finally(() => setLoading(false));
+  }, [logout]);
 
-    try {
-      const res = await fetch(
-        "https://taskmanagement-n1tx.onrender.com/api/auth/me",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!res.ok) throw new Error("Session expired");
-
-      const data = await res.json();
-      setUser(data);
-    } catch {
-      logout();
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Any 401 from the API (expired/invalid token) signs the user out
   useEffect(() => {
-    fetchMe();
-  }, []);
+    window.addEventListener("auth:expired", logout);
+    return () => window.removeEventListener("auth:expired", logout);
+  }, [logout]);
 
   const login = (token, userData) => {
     localStorage.setItem("token", token);
     setUser(userData);
   };
 
-  const logout = () => {
-    localStorage.removeItem("token");
-    setUser(null);
-  };
+  /** Merge profile changes (e.g. after saving settings) into the session user. */
+  const updateUser = (changes) =>
+    setUser((prev) => {
+      const next = { ...prev, ...changes };
+      next.fullName = `${next.firstName ?? ""} ${next.lastName ?? ""}`.trim();
+      return next;
+    });
 
   return (
     <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        isAuthenticated: !!user,
-        login,
-        logout,
-      }}
+      value={{ user, loading, isAuthenticated: !!user, login, logout, updateUser }}
     >
       {children}
     </AuthContext.Provider>

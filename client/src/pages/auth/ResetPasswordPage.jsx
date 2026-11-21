@@ -1,132 +1,100 @@
-import { useEffect, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { toast } from "react-hot-toast";
 import AuthLayout from "../../layouts/AuthLayout";
+import PasswordField, { PasswordStrength } from "../../components/auth/PasswordField";
+import FormAlert from "../../components/auth/FormAlert";
+import { authApi, getErrorMessage } from "../../services/api";
 
 export default function ResetPasswordPage() {
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get("token");
+  const [params] = useSearchParams();
+  const token = params.get("token");
   const navigate = useNavigate();
-
-  const passwordRef = useRef(null);
-
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    passwordRef.current?.focus();
-  }, []);
+  const back = (
+    <Link to="/login" className="link inline-flex items-center gap-1">
+      <ArrowLeft size={14} /> Back to sign in
+    </Link>
+  );
 
-  const getPasswordStrength = () => {
-    if (!password) return null;
-    if (password.length < 6) return { label: "Weak", color: "bg-red-500" };
-    if (/[A-Z]/.test(password) && /\d/.test(password))
-      return { label: "Strong", color: "bg-green-500" };
-    return { label: "Medium", color: "bg-yellow-500" };
-  };
-
-  const strength = getPasswordStrength();
+  if (!token) {
+    return (
+      <AuthLayout title="This link isn't valid" subtitle="The reset link is missing or incomplete." docTitle="Reset password" footer={back}>
+        <Link to="/forgot-password" className="btn btn-primary btn-lg w-full">
+          Request a new link
+        </Link>
+      </AuthLayout>
+    );
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const er = {};
+    if (password.length < 6) er.password = "Use at least 6 characters";
+    if (confirm !== password) er.confirm = "Passwords don't match";
+    setErrors(er);
+    if (Object.keys(er).length) return;
 
-    if (password !== confirm) {
-      toast.error("Passwords do not match");
-      return;
-    }
-
+    setLoading(true);
     try {
-      setLoading(true);
-
-      const res = await fetch(
-        "https://taskmanagement-n1tx.onrender.com/api/auth/reset",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token, password }),
-        }
-      );
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Reset failed");
-
-      toast.success("Password reset successful 🔐");
+      await authApi.reset(token, password);
+      toast.success("Password updated. Sign in with your new password.");
       navigate("/login");
     } catch (err) {
-      toast.error(err.message);
+      setError(getErrorMessage(err, "Couldn't reset your password"));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <AuthLayout
-      title="Reset your password"
-      subtitle="Choose a strong password to secure your account"
-    >
-      <form onSubmit={handleSubmit} noValidate className="space-y-5">
-
-        {/* New password */}
-        <div className="relative">
-          <input
-            ref={passwordRef}
-            type={showPassword ? "text" : "password"}
-            placeholder="New password"
+    <AuthLayout title="Choose a new password" subtitle="Make it something you haven't used before." docTitle="Reset password" footer={back}>
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
+        <FormAlert>
+          {error}
+          {error && /invalid|expired/i.test(error) && (
+            <>
+              {" "}
+              <Link to="/forgot-password" className="font-medium underline">
+                Request a new link
+              </Link>
+            </>
+          )}
+        </FormAlert>
+        <div>
+          <PasswordField
+            id="password"
+            label="New password"
+            autoComplete="new-password"
+            autoFocus
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="input pr-14"
-            required
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setErrors((x) => ({ ...x, password: undefined }));
+            }}
+            error={errors.password}
           />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-primary hover:underline"
-          >
-            {showPassword ? "Hide" : "Show"}
-          </button>
+          <PasswordStrength password={password} />
         </div>
-
-        {/* Strength meter */}
-        {strength && (
-          <div>
-            <div className="h-1 rounded bg-dark/10">
-              <div
-                className={`h-1 rounded ${strength.color}`}
-                style={{
-                  width:
-                    strength.label === "Weak"
-                      ? "33%"
-                      : strength.label === "Medium"
-                      ? "66%"
-                      : "100%",
-                }}
-              />
-            </div>
-            <p className="text-xs text-accent mt-1">
-              Password strength: {strength.label}
-            </p>
-          </div>
-        )}
-
-        {/* Confirm password */}
-        <input
-          type="password"
-          placeholder="Confirm password"
+        <PasswordField
+          id="confirm"
+          label="Confirm new password"
+          autoComplete="new-password"
           value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          className="input"
-          required
+          onChange={(e) => {
+            setConfirm(e.target.value);
+            setErrors((x) => ({ ...x, confirm: undefined }));
+          }}
+          error={errors.confirm}
         />
-
-        {/* Submit */}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-3 rounded-xl bg-primary text-white font-semibold transition-all hover:bg-accent hover:-translate-y-0.5 disabled:opacity-50"
-        >
-          {loading ? "Resetting…" : "Reset Password"}
+        <button type="submit" className="btn btn-primary btn-lg w-full" disabled={loading}>
+          {loading ? "Updating…" : "Update password"}
         </button>
       </form>
     </AuthLayout>
