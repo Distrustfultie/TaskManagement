@@ -1,35 +1,40 @@
-import { useEffect } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+// Not routed: email verification is disabled for the MVP. Kept for when it returns.
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
+import AuthLayout from "../../layouts/AuthLayout";
+import FormAlert from "../../components/auth/FormAlert";
+import { http, getErrorMessage } from "../../services/api";
 
 export default function VerifyEmail() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const token = params.get("token");
+  const [error, setError] = useState(token ? "" : "This verification link is missing its token.");
 
   useEffect(() => {
-    const verify = async () => {
-      try {
-        const res = await fetch(
-          `https://taskmanagement-n1tx.onrender.com/api/auth/verify-email?token=${token}`
-        );
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message);
-
-        toast.success("Email verified! You can now log in.");
+    if (!token) return;
+    http
+      .get("/api/auth/verify-email", { params: { token } })
+      .then(() => {
+        toast.success("Email verified! You can now sign in.");
         navigate("/login");
-      } catch (err) {
-        toast.error(err.message || "Invalid or expired token");
-      }
-    };
-
-    if (token) verify();
+      })
+      .catch((err) => setError(getErrorMessage(err, "Invalid or expired link")));
   }, [token, navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p>Verifying your email…</p>
-    </div>
+    <AuthLayout title={error ? "Couldn't verify your email" : "Verifying your email…"} docTitle="Verify email">
+      {error ? (
+        <div className="space-y-4">
+          <FormAlert>{error}</FormAlert>
+          <Link to="/login" className="btn btn-secondary w-full">
+            Back to sign in
+          </Link>
+        </div>
+      ) : (
+        <p className="text-muted">This only takes a moment.</p>
+      )}
+    </AuthLayout>
   );
 }
