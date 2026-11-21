@@ -4,7 +4,8 @@ import { Trash2, X } from "lucide-react";
 import { useTasks } from "../../context/TasksContext";
 import { useProjects } from "../../context/ProjectsContext";
 import ConfirmDialog from "../ui/ConfirmDialog";
-import { PRIORITIES, STATUSES } from "../ui/Badges";
+import Select from "../ui/Select";
+import { PRIORITY_OPTIONS, STATUS_OPTIONS, projectOptions } from "../../utils/options";
 
 /** Floating action bar for the selected tasks. */
 export default function BulkBar({ selected, onClear }) {
@@ -23,8 +24,6 @@ export default function BulkBar({ selected, onClear }) {
     }
   };
 
-  const selectCls = "input h-8 w-auto py-0 pl-2.5 text-[13px]";
-
   return (
     <>
       <AnimatePresence>
@@ -39,36 +38,24 @@ export default function BulkBar({ selected, onClear }) {
             aria-label="Bulk actions"
           >
             <span className="mr-1 text-[13px] font-semibold text-ink">{n} selected</span>
-            <select className={selectCls} value="" onChange={(e) => e.target.value && apply({ status: e.target.value })} aria-label="Set status">
-              <option value="">Status…</option>
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-            <select className={selectCls} value="" onChange={(e) => e.target.value && apply({ priority: e.target.value })} aria-label="Set priority">
-              <option value="">Priority…</option>
-              {PRIORITIES.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-            <select
-              className={selectCls}
-              value=""
-              onChange={(e) => e.target.value && apply({ project: e.target.value === "none" ? null : e.target.value })}
-              aria-label="Move to project"
-            >
-              <option value="">Move to…</option>
-              <option value="none">No project</option>
-              {active.map((p) => (
-                <option key={p._id} value={p._id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+            {/* value="" never matches, so each Select acts as an action menu */}
+            <div className="w-32">
+              <Select size="sm" value="" placeholder="Status…" ariaLabel="Set status" minWidth={170} options={STATUS_OPTIONS} onChange={(v) => apply({ status: v })} />
+            </div>
+            <div className="w-32">
+              <Select size="sm" value="" placeholder="Priority…" ariaLabel="Set priority" minWidth={170} options={PRIORITY_OPTIONS} onChange={(v) => apply({ priority: v })} />
+            </div>
+            <div className="w-36">
+              <Select
+                size="sm"
+                value=""
+                placeholder="Move to…"
+                ariaLabel="Move to project"
+                minWidth={220}
+                options={[{ value: "none", label: "No project" }, ...projectOptions(active)]}
+                onChange={(v) => apply({ project: v === "none" ? null : v })}
+              />
+            </div>
             <div className="ml-auto flex items-center gap-1">
               <button className="btn btn-ghost btn-sm text-primary-ink hover:bg-primary-soft hover:text-primary-ink" onClick={() => setConfirm(true)}>
                 <Trash2 size={15} /> Delete
@@ -90,6 +77,7 @@ export default function BulkBar({ selected, onClear }) {
         title={`Delete ${n} task${n === 1 ? "" : "s"}?`}
         description="This can't be undone."
         confirmLabel="Delete"
+        icon={Trash2}
       />
     </>
   );

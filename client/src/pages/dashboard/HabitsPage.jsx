@@ -219,6 +219,7 @@ export default function HabitsPage() {
         title={`Delete “${deleting?.name}”?`}
         description="Its history will be lost."
         confirmLabel="Delete habit"
+        icon={Trash2}
       />
     </div>
   );

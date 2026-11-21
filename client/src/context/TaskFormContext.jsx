@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { Trash2 } from "lucide-react";
 import TaskFormModal from "../components/tasks/TaskFormModal";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
 import { useTasks } from "./TasksContext";
@@ -55,6 +56,7 @@ export function TaskFormProvider({ children }) {
         title="Delete this task?"
         description={toDelete ? `“${toDelete.title}” will be permanently deleted.` : undefined}
         confirmLabel="Delete task"
+        icon={Trash2}
       />
     </TaskFormContext.Provider>
   );

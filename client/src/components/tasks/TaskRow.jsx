@@ -6,6 +6,7 @@ import { useTaskForm } from "../../context/TaskFormContext";
 import { useProjects } from "../../context/ProjectsContext";
 import { PriorityBadge, StatusBadge } from "../ui/Badges";
 import Avatar from "../ui/Avatar";
+import Checkbox from "../ui/Checkbox";
 import ProjectBadge from "../projects/ProjectBadge";
 import { formatDue, formatDuration, isDone, isOverdue } from "../../utils/dates";
 import { refId } from "../../utils/projects";
@@ -34,13 +35,12 @@ function TaskRow({ task, compact = false, showProject = true, selected = false, 
   return (
     <div className={`group flex items-start gap-3 px-4 py-3 transition-colors hover:bg-subtle/60 ${selected ? "bg-primary-soft/40" : ""}`}>
       {onToggleSelect && (
-        <input
-          type="checkbox"
+        <Checkbox
           checked={selected}
           onChange={() => onToggleSelect(task._id)}
-          aria-label={`Select “${task.title}”`}
-          className={`mt-[3px] h-4 w-4 shrink-0 cursor-pointer rounded accent-[rgb(var(--primary))] transition-opacity ${
-            selected || selecting ? "" : "sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+          ariaLabel={`Select “${task.title}”`}
+          className={`mt-px shrink-0 transition-opacity ${
+            selected || selecting ? "" : "sm:opacity-0 sm:focus-within:opacity-100 sm:group-hover:opacity-100"
           }`}
         />
       )}

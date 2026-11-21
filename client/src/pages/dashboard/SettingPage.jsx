@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { LogOut, Monitor, Moon, Sun } from "lucide-react";
+import { LogOut, Monitor, Moon, Sun, Undo2 } from "lucide-react";
+import Select from "../../components/ui/Select";
+import { FREQUENCY_OPTIONS } from "../../utils/options";
+import { useConfirm } from "../../context/ConfirmContext";
+import useSignOut from "../../hooks/useSignOut";
 import { toast } from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
@@ -30,8 +33,9 @@ const THEMES = [
 ];
 
 export default function SettingsPage() {
-  const navigate = useNavigate();
-  const { user, updateUser, logout } = useAuth();
+  const { user, updateUser } = useAuth();
+  const confirm = useConfirm();
+  const signOut = useSignOut();
   const { theme, setTheme } = useTheme();
   const [form, setForm] = useState(null);
   const [saved, setSaved] = useState(null);
@@ -138,11 +142,12 @@ export default function SettingsPage() {
           {form ? (
             <div className="max-w-xs">
               <label htmlFor="s-freq" className="label">Default frequency</label>
-              <select id="s-freq" className="input" value={form.defaultFreq} onChange={set("defaultFreq")}>
-                <option value="Daily">Every day</option>
-                <option value="Weekly">Every week</option>
-                <option value="Monthly">Every month</option>
-              </select>
+              <Select
+                id="s-freq"
+                value={form.defaultFreq}
+                options={FREQUENCY_OPTIONS}
+                onChange={(v) => setForm((f) => ({ ...f, defaultFreq: v }))}
+              />
             </div>
           ) : (
             <Skeleton className="h-10 max-w-xs" />
@@ -151,7 +156,24 @@ export default function SettingsPage() {
 
         <div className="flex items-center justify-end gap-3">
           {dirty && <span className="text-[13px] text-muted">You have unsaved changes</span>}
-          <button type="button" className="btn btn-secondary" disabled={!dirty || saving} onClick={() => setForm(saved)}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={!dirty || saving}
+            onClick={async () => {
+              const ok = await confirm({
+                title: "Discard your changes?",
+                description: "Your profile and reminder settings will go back to what's saved.",
+                confirmLabel: "Discard",
+                cancelLabel: "Keep editing",
+                icon: Undo2,
+              });
+              if (ok) {
+                setForm(saved);
+                setErrors({});
+              }
+            }}
+          >
             Discard
           </button>
           <button type="submit" className="btn btn-primary" disabled={!dirty || saving}>
@@ -177,14 +199,8 @@ export default function SettingsPage() {
       </Section>
 
       <Section title="Session" description="Sign out of Efes Manager on this device.">
-        <button
-          className="btn btn-secondary"
-          onClick={() => {
-            logout();
-            navigate("/login");
-          }}
-        >
-          <LogOut size={16} /> Log out
+        <button className="btn btn-secondary" onClick={signOut}>
+          <LogOut size={16} /> Sign out
         </button>
       </Section>
     </div>

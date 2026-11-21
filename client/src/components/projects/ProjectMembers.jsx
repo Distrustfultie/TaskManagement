@@ -144,6 +144,7 @@ export default function ProjectMembers({ project }) {
             : "They'll lose access to this project, and their tasks here will be unassigned."
         }
         confirmLabel={removing && refId(removing.user) === user?._id ? "Leave project" : "Remove member"}
+        icon={removing && refId(removing.user) === user?._id ? LogOut : UserMinus}
       />
     </div>
   );

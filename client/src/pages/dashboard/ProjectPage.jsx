@@ -5,6 +5,7 @@ import { useProjects } from "../../context/ProjectsContext";
 import { useTasks } from "../../context/TasksContext";
 import { useTaskForm } from "../../context/TaskFormContext";
 import { useAuth } from "../../context/AuthContext";
+import { useConfirm } from "../../context/ConfirmContext";
 import TaskWorkspace from "../../components/tasks/TaskWorkspace";
 import ProjectMembers from "../../components/projects/ProjectMembers";
 import ActivityFeed from "../../components/activity/ActivityFeed";
@@ -29,6 +30,7 @@ export default function ProjectPage() {
   const { tasks, refresh } = useTasks();
   const { openNew } = useTaskForm();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const confirm = useConfirm();
 
   const project = byId[id];
   const tab = TABS.some((t) => t.id === params.get("tab")) ? params.get("tab") : "tasks";
@@ -121,7 +123,17 @@ export default function ProjectPage() {
               <>
                 <button
                   className="btn btn-secondary btn-icon"
-                  onClick={() => updateProject(id, { archived: !project.archived })}
+                  onClick={async () => {
+                    if (project.archived) return updateProject(id, { archived: false });
+                    const ok = await confirm({
+                      title: `Archive “${project.name}”?`,
+                      description: "It will be hidden from the sidebar and project lists for everyone. Its tasks stay, and you can restore it any time.",
+                      confirmLabel: "Archive project",
+                      tone: "neutral",
+                      icon: Archive,
+                    });
+                    if (ok) updateProject(id, { archived: true });
+                  }}
                   aria-label={project.archived ? "Restore project" : "Archive project"}
                   title={project.archived ? "Restore project" : "Archive project"}
                 >
@@ -175,6 +187,7 @@ export default function ProjectPage() {
         title={`Delete “${project.name}”?`}
         description="The project is removed for everyone. Its tasks are kept and moved out of the project."
         confirmLabel="Delete project"
+        icon={Trash2}
       />
     </div>
   );

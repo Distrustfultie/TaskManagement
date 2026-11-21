@@ -1,7 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
-import { BellRing, Play, Repeat, Timer, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { BellRing, PencilOff, Play, Repeat, Timer, Trash2 } from "lucide-react";
 import Modal from "../ui/Modal";
 import Segmented from "../ui/Segmented";
+import Select from "../ui/Select";
+import Checkbox from "../ui/Checkbox";
+import { useConfirm } from "../../context/ConfirmContext";
+import { projectOptions } from "../../utils/options";
 import TagInput from "./TagInput";
 import SubtaskEditor from "./SubtaskEditor";
 import CommentThread from "./CommentThread";
@@ -57,14 +61,35 @@ export default function TaskFormModal({ open, onClose, task, defaults, onRequest
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState("details");
+  const confirm = useConfirm();
+  const snapshot = useRef("");
 
   useEffect(() => {
     if (open) {
-      setForm(initialForm(task, defaults));
+      const initial = initialForm(task, defaults);
+      snapshot.current = JSON.stringify(initial);
+      setForm(initial);
       setErrors({});
       setTab("details");
     }
   }, [open, task, defaults]);
+
+  // Closing with unsaved edits asks first
+  const dirty = open && JSON.stringify(form) !== snapshot.current;
+  const requestClose = async () => {
+    if (saving) return;
+    if (dirty) {
+      const ok = await confirm({
+        title: editing ? "Discard your changes?" : "Discard this task?",
+        description: editing ? "Your edits to this task haven't been saved." : "What you've entered so far will be lost.",
+        confirmLabel: "Discard",
+        cancelLabel: "Keep editing",
+        icon: PencilOff,
+      });
+      if (!ok) return;
+    }
+    onClose();
+  };
 
   const categories = useMemo(() => [...new Set(tasks.map((t) => t.category).filter((c) => c && c !== "General"))].sort(), [tasks]);
   const allTags = useMemo(() => [...new Set(tasks.flatMap((t) => t.tags ?? []))].sort(), [tasks]);
@@ -134,7 +159,7 @@ export default function TaskFormModal({ open, onClose, task, defaults, onRequest
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={requestClose}
       size="lg"
       title={editing ? "Edit task" : "New task"}
       footer={
@@ -148,7 +173,7 @@ export default function TaskFormModal({ open, onClose, task, defaults, onRequest
               <Trash2 size={16} /> Delete
             </button>
           )}
-          <button type="button" onClick={onClose} className="btn btn-secondary">
+          <button type="button" onClick={requestClose} className="btn btn-secondary">
             {tab === "details" ? "Cancel" : "Close"}
           </button>
           {tab === "details" && (
@@ -261,33 +286,27 @@ export default function TaskFormModal({ open, onClose, task, defaults, onRequest
             <label htmlFor="task-project" className="label">
               Project
             </label>
-            <select id="task-project" className="input" value={form.project} onChange={(e) => set("project")(e.target.value)}>
-              <option value="">No project</option>
-              {projects.map((p) => (
-                <option key={p._id} value={p._id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+            <Select
+              id="task-project"
+              value={form.project}
+              onChange={set("project")}
+              options={[{ value: "", label: "No project" }, ...projectOptions(projects)]}
+            />
           </div>
           <div>
             <label htmlFor="task-assignee" className="label">
               Assignee
             </label>
-            <select
+            <Select
               id="task-assignee"
-              className="input"
               value={form.assignee}
-              onChange={(e) => set("assignee")(e.target.value)}
+              onChange={set("assignee")}
               disabled={!project}
-            >
-              <option value="">{project ? "Unassigned" : "Pick a project first"}</option>
-              {members.map((m) => (
-                <option key={refId(m.user)} value={refId(m.user)}>
-                  {fullName(m.user)}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: "", label: project ? "Unassigned" : "Pick a project first" },
+                ...members.map((m) => ({ value: refId(m.user), label: fullName(m.user), description: m.user?.email })),
+              ]}
+            />
           </div>
         </div>
 
@@ -310,13 +329,7 @@ export default function TaskFormModal({ open, onClose, task, defaults, onRequest
                 <Repeat size={13} className="text-faint" /> Repeat
               </span>
             </label>
-            <select id="task-repeat" className="input" value={form.recurrence} onChange={(e) => set("recurrence")(e.target.value)}>
-              {RECURRENCE.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
+            <Select id="task-repeat" value={form.recurrence} onChange={set("recurrence")} options={RECURRENCE} />
             {form.recurrence !== "none" && <p className="hint">Completing it schedules the next one automatically.</p>}
           </div>
           <div>
@@ -341,20 +354,17 @@ export default function TaskFormModal({ open, onClose, task, defaults, onRequest
         </div>
 
         <div className="rounded-xl border border-line p-4">
-          <label className="flex cursor-pointer items-start gap-3">
-            <input
-              type="checkbox"
-              className="mt-0.5 h-4 w-4 rounded accent-[rgb(var(--primary))]"
-              checked={form.remind}
-              onChange={(e) => set("remind")(e.target.checked)}
-            />
-            <span>
-              <span className="flex items-center gap-1.5 text-sm font-medium text-ink">
+          <Checkbox
+            checked={form.remind}
+            onChange={set("remind")}
+            labelClassName="text-sm font-medium text-ink"
+            label={
+              <span className="flex items-center gap-1.5">
                 <BellRing size={15} className="text-faint" /> Email me a reminder
               </span>
-              <span className="mt-0.5 block text-xs text-faint">Sent to the email on your account.</span>
-            </span>
-          </label>
+            }
+            description="Sent to the email on your account."
+          />
 
           {form.remind && (
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -376,18 +386,7 @@ export default function TaskFormModal({ open, onClose, task, defaults, onRequest
                 <label htmlFor="task-remind-freq" className="label">
                   Repeat reminder
                 </label>
-                <select
-                  id="task-remind-freq"
-                  className="input"
-                  value={form.reminderFrequency}
-                  onChange={(e) => set("reminderFrequency")(e.target.value)}
-                >
-                  {FREQUENCIES.map((f) => (
-                    <option key={f.value} value={f.value}>
-                      {f.label}
-                    </option>
-                  ))}
-                </select>
+                <Select id="task-remind-freq" value={form.reminderFrequency} onChange={set("reminderFrequency")} options={FREQUENCIES} />
               </div>
             </div>
           )}
