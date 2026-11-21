@@ -2,13 +2,43 @@ import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
+import { useLayer } from "../../utils/layers";
+
+// Scroll lock shared by stacked modals: unlock only when the last one closes
+let locks = 0;
+const lockScroll = () => {
+  if (locks++ === 0) document.body.style.overflow = "hidden";
+};
+const unlockScroll = () => {
+  if (--locks <= 0) {
+    locks = 0;
+    document.body.style.overflow = "";
+  }
+};
+
+const ICON_TONES = {
+  danger: "bg-primary-soft text-primary-ink",
+  neutral: "bg-subtle text-muted",
+};
 
 /**
- * Accessible modal: Esc / backdrop close, focus moved in and restored,
- * body scroll locked. Renders as a bottom sheet on small screens.
+ * Accessible modal: Esc (top-most layer only) / backdrop / X close, focus moved
+ * in and restored, body scroll locked. Bottom sheet on small screens.
  */
-export default function Modal({ open, onClose, title, description, children, footer, size = "md" }) {
+export default function Modal({
+  open,
+  onClose,
+  title,
+  description,
+  children,
+  footer,
+  size = "md",
+  icon: Icon,
+  iconTone = "neutral",
+  role = "dialog",
+}) {
   const titleId = useId();
+  const descId = useId();
   const panelRef = useRef(null);
   const widths = { sm: "sm:max-w-sm", md: "sm:max-w-lg", lg: "sm:max-w-2xl" };
 
@@ -16,31 +46,24 @@ export default function Modal({ open, onClose, title, description, children, foo
   // parent render (which would steal focus while the user types).
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  useLayer(open, () => onCloseRef.current?.());
 
   useEffect(() => {
     if (!open) return;
     const previouslyFocused = document.activeElement;
-    const onKey = (e) => e.key === "Escape" && onCloseRef.current?.();
-    document.addEventListener("keydown", onKey);
-    const { overflow } = document.body.style;
-    document.body.style.overflow = "hidden";
+    lockScroll();
 
-    // Focus the first field (or the panel) once it has mounted
+    // Focus the explicit target, else the first field, else the panel
     const t = setTimeout(() => {
-      // querySelector with a selector list returns the first match in DOM order
-      // (that would be the close button), so look for the explicit target first.
       const panel = panelRef.current;
-      const el =
-        panel?.querySelector("[data-autofocus]") ||
-        panel?.querySelector("input:not([type=hidden]), select, textarea");
+      const el = panel?.querySelector("[data-autofocus]") || panel?.querySelector("input:not([type=hidden]), textarea");
       (el || panel)?.focus();
     }, 30);
 
     return () => {
       clearTimeout(t);
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = overflow;
-      previouslyFocused?.focus?.();
+      unlockScroll();
+      previouslyFocused?.focus?.({ preventScroll: true });
     };
   }, [open]);
 
@@ -54,13 +77,14 @@ export default function Modal({ open, onClose, title, description, children, foo
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            onClick={onClose}
+            onClick={() => onCloseRef.current?.()}
           />
           <motion.div
             ref={panelRef}
-            role="dialog"
+            role={role}
             aria-modal="true"
             aria-labelledby={titleId}
+            aria-describedby={description ? descId : undefined}
             tabIndex={-1}
             className={`relative flex max-h-[92vh] w-full flex-col rounded-t-2xl border border-line bg-surface shadow-pop outline-none sm:rounded-2xl ${widths[size]}`}
             initial={{ opacity: 0, y: 24, scale: 0.98 }}
@@ -68,18 +92,27 @@ export default function Modal({ open, onClose, title, description, children, foo
             exit={{ opacity: 0, y: 16, scale: 0.98 }}
             transition={{ type: "spring", duration: 0.3, bounce: 0.1 }}
           >
-            <div className="flex items-start justify-between gap-4 px-5 pb-2 pt-5 sm:px-6">
-              <div>
+            <div className={`flex items-start gap-4 px-5 pt-5 sm:px-6 ${children ? "pb-2" : "pb-5"}`}>
+              {Icon && (
+                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${ICON_TONES[iconTone] ?? ICON_TONES.neutral}`}>
+                  <Icon size={19} />
+                </span>
+              )}
+              <div className="min-w-0 flex-1 pt-0.5">
                 <h2 id={titleId} className="text-base font-semibold text-ink">
                   {title}
                 </h2>
-                {description && <p className="mt-1 text-sm text-muted">{description}</p>}
+                {description && (
+                  <p id={descId} className="mt-1 text-sm leading-relaxed text-muted">
+                    {description}
+                  </p>
+                )}
               </div>
-              <button onClick={onClose} className="btn btn-ghost btn-icon btn-sm -mr-1.5 -mt-1" aria-label="Close">
+              <button onClick={() => onCloseRef.current?.()} className="btn btn-ghost btn-icon btn-sm -mr-1.5 -mt-1" aria-label="Close">
                 <X size={18} />
               </button>
             </div>
-            <div className="scrollbar-thin overflow-y-auto px-5 py-3 sm:px-6">{children}</div>
+            {children && <div className="scrollbar-thin overflow-y-auto px-5 py-3 sm:px-6">{children}</div>}
             {footer && (
               <div className="flex flex-col-reverse gap-2 border-t border-line px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
                 {footer}

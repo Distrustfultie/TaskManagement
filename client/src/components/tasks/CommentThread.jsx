@@ -5,6 +5,7 @@ import { toast } from "react-hot-toast";
 import { commentApi, getErrorMessage } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { useTasks } from "../../context/TasksContext";
+import { useConfirm } from "../../context/ConfirmContext";
 import Avatar from "../ui/Avatar";
 import EmptyState from "../ui/EmptyState";
 import { Skeleton } from "../ui/Skeleton";
@@ -13,6 +14,7 @@ import { fullName } from "../../utils/projects";
 export default function CommentThread({ taskId }) {
   const { user } = useAuth();
   const { patchTask } = useTasks();
+  const confirm = useConfirm();
   const [comments, setComments] = useState(null);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -56,6 +58,13 @@ export default function CommentThread({ taskId }) {
   };
 
   const remove = async (c) => {
+    const ok = await confirm({
+      title: "Delete this comment?",
+      description: "It will be removed for everyone on this task.",
+      confirmLabel: "Delete comment",
+      icon: Trash2,
+    });
+    if (!ok) return;
     try {
       await commentApi.remove(taskId, c._id);
       setComments((prev) => prev.filter((x) => x._id !== c._id));

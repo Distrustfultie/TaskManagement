@@ -3,6 +3,9 @@ import { useSearchParams } from "react-router-dom";
 import { Search } from "lucide-react";
 import Segmented from "../ui/Segmented";
 import ViewToggle from "./ViewToggle";
+import Select from "../ui/Select";
+import Checkbox from "../ui/Checkbox";
+import { PRIORITY_OPTIONS, projectOptions } from "../../utils/options";
 import { PRIORITIES, STATUSES, normalizePriority } from "../ui/Badges";
 import { useProjects } from "../../context/ProjectsContext";
 import { useAuth } from "../../context/AuthContext";
@@ -69,7 +72,6 @@ export default function TaskFilters({ tasks, filterApi, hideProject = false }) {
   const tags = useMemo(() => [...new Set(tasks.flatMap((t) => t.tags ?? []))].sort(), [tasks]);
   const anyAssigned = tasks.some((t) => refId(t.assignee) === user?._id);
 
-  const selectCls = "input h-9 w-auto shrink-0 text-[13px]";
 
   return (
     <div className="space-y-3">
@@ -104,45 +106,44 @@ export default function TaskFilters({ tasks, filterApi, hideProject = false }) {
             )}
           />
         )}
-        <select className={selectCls} value={filters.priority} onChange={(e) => set("priority", e.target.value)} aria-label="Filter by priority">
-          <option value="">Any priority</option>
-          {PRIORITIES.map((p) => (
-            <option key={p} value={p}>
-              {p} priority
-            </option>
-          ))}
-        </select>
+        <div className="w-36 shrink-0">
+          <Select
+            size="sm"
+            ariaLabel="Filter by priority"
+            value={filters.priority}
+            onChange={(v) => set("priority", v)}
+            minWidth={170}
+            options={[{ value: "", label: "Any priority" }, ...PRIORITY_OPTIONS.map((o) => ({ ...o, label: `${o.label} priority` }))]}
+          />
+        </div>
         {!hideProject && projects.length > 0 && (
-          <select className={selectCls} value={filters.project} onChange={(e) => set("project", e.target.value)} aria-label="Filter by project">
-            <option value="">All projects</option>
-            <option value="none">No project</option>
-            {projects.map((p) => (
-              <option key={p._id} value={p._id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+          <div className="w-40 shrink-0">
+            <Select
+              size="sm"
+              ariaLabel="Filter by project"
+              value={filters.project}
+              onChange={(v) => set("project", v)}
+              minWidth={220}
+              options={[{ value: "", label: "All projects" }, { value: "none", label: "No project" }, ...projectOptions(projects)]}
+            />
+          </div>
         )}
         {tags.length > 0 && (
-          <select className={selectCls} value={filters.tag} onChange={(e) => set("tag", e.target.value)} aria-label="Filter by tag">
-            <option value="">Any tag</option>
-            {tags.map((t) => (
-              <option key={t} value={t}>
-                #{t}
-              </option>
-            ))}
-          </select>
+          <div className="w-32 shrink-0">
+            <Select
+              size="sm"
+              ariaLabel="Filter by tag"
+              value={filters.tag}
+              onChange={(v) => set("tag", v)}
+              minWidth={180}
+              options={[{ value: "", label: "Any tag" }, ...tags.map((t) => ({ value: t, label: `#${t}` }))]}
+            />
+          </div>
         )}
         {(anyAssigned || filters.mine) && (
-          <label className="flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-line bg-surface px-3 text-[13px] text-muted shadow-xs">
-            <input
-              type="checkbox"
-              className="h-4 w-4 accent-[rgb(var(--primary))]"
-              checked={filters.mine}
-              onChange={(e) => set("mine", e.target.checked ? "1" : "")}
-            />
-            Assigned to me
-          </label>
+          <div className="flex h-9 shrink-0 items-center rounded-lg border border-line bg-surface px-3 shadow-xs">
+            <Checkbox checked={filters.mine} onChange={(c) => set("mine", c ? "1" : "")} label="Assigned to me" labelClassName="text-[13px] text-muted" />
+          </div>
         )}
       </div>
     </div>

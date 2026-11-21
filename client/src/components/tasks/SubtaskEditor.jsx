@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
+import Checkbox from "../ui/Checkbox";
 
 let tempId = 0;
 
@@ -31,12 +32,12 @@ export default function SubtaskEditor({ value, onChange }) {
           <ul className="px-1.5 pt-1.5">
             {value.map((s, i) => (
               <li key={s._id ?? s.key} className="group flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-subtle/60">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 shrink-0 accent-[rgb(var(--status-done))]"
+                <Checkbox
+                  tone="done"
+                  className="shrink-0"
                   checked={s.done}
-                  onChange={(e) => update(i, { done: e.target.checked })}
-                  aria-label={`Mark “${s.title}” ${s.done ? "not done" : "done"}`}
+                  onChange={(done) => update(i, { done })}
+                  ariaLabel={`Mark “${s.title}” ${s.done ? "not done" : "done"}`}
                 />
                 <input
                   className={`min-w-0 flex-1 rounded bg-transparent px-1 py-0.5 text-sm focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/20 ${

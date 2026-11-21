@@ -1,4 +1,5 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
+import useSignOut from "../../hooks/useSignOut";
 import { AnimatePresence, motion } from "framer-motion";
 import { BarChart3, Bell, CalendarDays, CheckSquare, LayoutDashboard, LogOut, Plus, Repeat2, Settings, Users, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -41,8 +42,8 @@ function NavItem({ to, icon: Icon, label, count, end, highlight }) {
 }
 
 function SidebarContent({ onNavigate }) {
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const signOut = useSignOut();
   const { unreadCount } = useNotifications();
   const { tasks } = useTasks();
   const { active, openProjectForm } = useProjects();
@@ -119,13 +120,10 @@ function SidebarContent({ onNavigate }) {
             <p className="truncate text-xs text-faint">{user?.email}</p>
           </div>
           <button
-            onClick={() => {
-              logout();
-              navigate("/login");
-            }}
+            onClick={signOut}
             className="btn btn-ghost btn-icon btn-sm"
-            aria-label="Log out"
-            title="Log out"
+            aria-label="Sign out"
+            title="Sign out"
           >
             <LogOut size={16} />
           </button>

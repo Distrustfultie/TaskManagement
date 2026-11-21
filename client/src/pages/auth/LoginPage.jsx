@@ -4,6 +4,7 @@ import { toast } from "react-hot-toast";
 import AuthLayout from "../../layouts/AuthLayout";
 import PasswordField from "../../components/auth/PasswordField";
 import FormAlert from "../../components/auth/FormAlert";
+import Checkbox from "../../components/ui/Checkbox";
 import { useAuth } from "../../context/AuthContext";
 import { authApi, getErrorMessage } from "../../services/api";
 
@@ -89,15 +90,12 @@ export default function LoginPage() {
           }
         />
 
-        <label className="flex cursor-pointer items-center gap-2 text-[13px] text-muted">
-          <input
-            type="checkbox"
-            className="h-4 w-4 rounded accent-[rgb(var(--primary))]"
-            checked={form.rememberMe}
-            onChange={set("rememberMe")}
-          />
-          Keep me signed in for 30 days
-        </label>
+        <Checkbox
+          checked={form.rememberMe}
+          onChange={(v) => setForm((f) => ({ ...f, rememberMe: v }))}
+          label="Keep me signed in for 30 days"
+          labelClassName="text-[13px] text-muted"
+        />
 
         <button type="submit" className="btn btn-primary btn-lg w-full" disabled={loading}>
           {loading ? "Signing in…" : "Sign in"}
